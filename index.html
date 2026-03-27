@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Video Merger | Premium Web Utility</title>
+    <link rel="stylesheet" href="/src/style.css">
+    <!-- Load FFmpeg v0.11 via CDN (UMD Version) -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <header>
+            <h1>Audio Video Merger</h1>
+            <p class="subtitle">Secure, Client-Side Media Synchronization</p>
+        </header>
+
+        <main class="dashboard">
+            <div class="glass-card">
+                <section class="drop-zone-container">
+                    <div id="video-drop" class="drop-zone">
+                        <div class="drop-content">
+                            <span class="drop-icon">🎬</span>
+                            <h3>Source Video</h3>
+                            <p>Drag Video or Click</p>
+                            <span class="file-name" id="video-name">No file selected</span>
+                        </div>
+                        <input type="file" id="video-input" accept="video/*" class="invisible-input">
+                    </div>
+
+                    <div id="audio-drop" class="drop-zone">
+                        <div class="drop-content">
+                            <span class="drop-icon">🎵</span>
+                            <h3>Source Audio</h3>
+                            <p>Drag Audio or Click</p>
+                            <span class="file-name" id="audio-name">No file selected</span>
+                        </div>
+                        <input type="file" id="audio-input" accept="audio/*" class="invisible-input">
+                    </div>
+                </section>
+
+                <section class="options-container">
+                    <h3>Audio Processing Mode</h3>
+                    <div class="options-grid">
+                        <label class="option-card">
+                            <input type="radio" name="audio-mode" value="replace" checked>
+                            <div class="option-info">
+                                <span class="option-title">Replace Original</span>
+                                <span class="option-desc">Swap video audio with new track</span>
+                            </div>
+                        </label>
+                        <label class="option-card">
+                            <input type="radio" name="audio-mode" value="mix">
+                            <div class="option-info">
+                                <span class="option-title">Mix with Original</span>
+                                <span class="option-desc">Blend both audio tracks together</span>
+                            </div>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="action-container">
+                    <div class="status-bar">
+                        <div id="progress-bar" class="progress"></div>
+                        <p id="status-text">Ready to process</p>
+                    </div>
+                    <button id="merge-btn" class="primary-btn" disabled>
+                        Mux & Export MP4
+                    </button>
+                </section>
+
+                <section class="system-log-container">
+                    <div id="system-log">System initializing...</div>
+                </section>
+            </div>
+        </main>
+
+        <footer>
+            <p>All processing is strictly local. <a href="https://github.com/yigit-guven/Audio-Video-Merger"
+                    target="_blank">View Source</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // Use FFmpeg from global window object (loaded via CDN)
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+        const state = { loaded: false, video: null, audio: null };
+
+        const $ = (id) => document.getElementById(id);
+
+        const log = (msg, isError = false) => {
+            console.log(msg);
+            const el = $('system-log');
+            if (el) {
+                const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                el.innerHTML += `<div><span style="color: #6366f1">[${time}]</span> ${isError ? '<span style="color: #ef4444">' + msg + '</span>' : msg}</div>`;
+                el.scrollTop = el.scrollHeight;
+            }
+        };
+
+        const updateStatus = (text, isError = false) => {
+            const el = $('status-text');
+            if (el) {
+                el.innerText = text;
+                el.style.color = isError ? '#ef4444' : 'inherit';
+            }
+        };
+
+        const checkReady = () => {
+            if (state.video && state.audio && state.loaded) {
+                $('merge-btn').disabled = false;
+                updateStatus('Files ready for muxing.');
+            }
+        };
+
+        // Initialization
+        const init = async () => {
+            try {
+                log('Initializing Stable Engine (v0.11 CDN)...');
+                updateStatus('Loading system components...');
+
+                await ffmpeg.load();
+
+                state.loaded = true;
+                updateStatus('Ready');
+                log('System ready.');
+                checkReady();
+            } catch (err) {
+                log('CRITICAL: Header Error detected.', true);
+                log('Hint: This tool requires a "Secure Context" (localhost) and special headers. Please ensure you are viewing http://localhost:5174/', true);
+                updateStatus('System Load Error', true);
+                console.error(err);
+            }
+        };
+
+        // File Selection Logic
+        document.addEventListener('change', (e) => {
+            if (e.target.type !== 'file') return;
+            const file = e.target.files[0];
+            if (!file) return;
+
+            log(`File captured: ${file.name}`);
+
+            if (e.target.id === 'video-input') {
+                state.video = file;
+                $('video-name').innerText = `Selected: ${file.name}`;
+            } else if (e.target.id === 'audio-input') {
+                state.audio = file;
+                $('audio-name').innerText = `Selected: ${file.name}`;
+            }
+
+            checkReady();
+        });
+
+        // Processing Logic
+        $('merge-btn').onclick = async () => {
+            if (!state.video || !state.audio || !state.loaded) return;
+
+            const mode = document.querySelector('input[name="audio-mode"]:checked').value;
+            $('merge-btn').disabled = true;
+            updateStatus('Muxing media...');
+            log(`Starting Mux (Mode: ${mode})`);
+
+            ffmpeg.setProgress(({ ratio }) => {
+                const percent = Math.round(ratio * 100);
+                updateStatus(`Processing: ${percent}%`);
+                $('progress-bar').style.width = `${percent}%`;
+            });
+
+            try {
+                log('Mapping assets...');
+                ffmpeg.FS('writeFile', 'v.mp4', await fetchFile(state.video));
+                ffmpeg.FS('writeFile', 'a.mp3', await fetchFile(state.audio));
+
+                const args = (mode === 'replace')
+                    ? ['-i', 'v.mp4', '-i', 'a.mp3', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0', '-map', '1:a:0', '-shortest', 'out.mp4']
+                    : ['-i', 'v.mp4', '-i', 'a.mp3', '-filter_complex', '[0:a][1:a]amix=inputs=2:duration=first[ao]', '-map', '0:v:0', '-map', '[ao]', '-c:v', 'copy', '-c:a', 'aac', 'out.mp4'];
+
+                log('Executing muxer command...');
+                await ffmpeg.run(...args);
+
+                log('Generating download...');
+                const data = ffmpeg.FS('readFile', 'out.mp4');
+                const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `merged_${Date.now()}.mp4`;
+                a.click();
+
+                updateStatus('Success! Download started.');
+                log('Workflow finished.');
+            } catch (err) {
+                log(`Error: ${err.message}`, true);
+                updateStatus('Failed');
+            } finally {
+                $('merge-btn').disabled = false;
+            }
+        };
+
+        // Start
+        init();
+    </script>
+</body>
+
+</html>
