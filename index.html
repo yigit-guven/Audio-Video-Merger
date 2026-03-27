@@ -3,16 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Video Merger | ST Stable</title>
-    <!-- Load UMD FFmpeg v0.12.10 (Predictable Global Loader) -->
+    <title>Audio Video Merger | Final Fix</title>
+    <!-- Pure UMD Loaders (No Modules) -->
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
-    <!-- Load Utils for Blob conversion -->
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
-    <link rel="stylesheet" href="src/app.css?v=600">
+    <link rel="stylesheet" href="src/app.css?v=700">
 </head>
 <body>
-    <div style="background: #a855f7; color: white; text-align: center; padding: 5px; font-weight: bold; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 10000; letter-spacing: 1px;">
-        V0.12-ST HEADERLESS ENGINE ACTIVATED
+    <div style="background: #34d399; color: black; text-align: center; padding: 5px; font-weight: bold; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 10000; letter-spacing: 1px;">
+        V0.12-ST PURE-UMD ENGINE ACTIVATED
     </div>
 
     <div id="app" style="margin-top: 30px;">
@@ -87,9 +86,10 @@
     </div>
 
     <script>
-        // High-Compatibility v0.12.10 UMD Logic
-        const { FFmpeg } = FFmpegWasm; // Provided by UMD script
-        const { toBlobURL } = FFmpegUtil; // Provided by UMD util
+        // Use Global UMD Exports (FFmpegWasm and FFmpegUtil)
+        const { FFmpeg } = FFmpegWasm;
+        const { toBlobURL } = FFmpegUtil;
+
         const ffmpeg = new FFmpeg();
         const state = { loaded: false, video: null, audio: null };
 
@@ -113,6 +113,49 @@
             }
         };
 
+        // UI Interactions
+        const setupInteractions = () => {
+            const vInput = $('video-input');
+            const vDrop = $('video-drop');
+            const aInput = $('audio-input');
+            const aDrop = $('audio-drop');
+
+            // Forward Click
+            vDrop.onclick = () => vInput.click();
+            aDrop.onclick = () => aInput.click();
+
+            // Handle Selection
+            const handleFile = (file, type) => {
+                if (!file) return;
+                log(`File captured: ${file.name}`);
+                if (type === 'video') {
+                    state.video = file;
+                    $('video-name').innerText = file.name;
+                    vDrop.classList.add('has-file');
+                } else {
+                    state.audio = file;
+                    $('audio-name').innerText = file.name;
+                    aDrop.classList.add('has-file');
+                }
+                checkReady();
+            };
+
+            vInput.onchange = (e) => handleFile(e.target.files[0], 'video');
+            aInput.onchange = (e) => handleFile(e.target.files[0], 'audio');
+
+            // Drag and Drop
+            [vDrop, aDrop].forEach(zone => {
+                zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('drag-over'); };
+                zone.ondragleave = () => zone.classList.remove('drag-over');
+                zone.ondrop = (e) => {
+                    e.preventDefault();
+                    zone.classList.remove('drag-over');
+                    const type = zone.id === 'video-drop' ? 'video' : 'audio';
+                    handleFile(e.dataTransfer.files[0], type);
+                };
+            });
+        };
+
         const checkReady = () => {
             if (state.video && state.audio && state.loaded) {
                 $('merge-btn').disabled = false;
@@ -122,96 +165,29 @@
 
         const init = async () => {
             try {
-                log('Launching v0.12-ST (Headerless Architecture)...');
-                updateStatus('Loading engine...');
+                log('Launching High-Stability UMD Engine...');
+                updateStatus('Initializing media core...');
 
-                // We use the ST (Single-Threaded) core which NEVER uses SharedArrayBuffer
                 const coreBaseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.11.1/dist';
                 
-                log('Fetching core assets...');
-                // Blobbing core and wasm to ensure same-origin bypass
+                // Pure UMD Fetch
                 const coreURL = await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript');
                 const wasmURL = await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm');
                 
-                log('Initializing media core...');
                 await ffmpeg.load({ coreURL, wasmURL });
 
                 state.loaded = true;
                 updateStatus('Ready');
-                log('System ready. Status: HEADERLESS-ONLINE');
+                log('System ready. Status: UMD-ST-OK');
                 checkReady();
             } catch (err) {
                 log(`ERROR: ${err.message}`, true);
-                updateStatus('Engine Load Error', true);
+                updateStatus('Load Error', true);
             }
         };
 
-        document.addEventListener('change', (e) => {
-            if (e.target.type !== 'file') return;
-            const file = e.target.files[0];
-            if (!file) return;
-
-            log(`File captured: ${file.name}`);
-
-            if (e.target.id === 'video-input') {
-                state.video = file;
-                $('video-name').innerText = file.name;
-            } else if (e.target.id === 'audio-input') {
-                state.audio = file;
-                $('audio-name').innerText = file.name;
-            }
-
-            checkReady();
-        });
-
-        $('merge-btn').onclick = async () => {
-            if (!state.video || !state.audio || !state.loaded) return;
-
-            const mode = document.querySelector('input[name="audio-mode"]:checked').value;
-            $('merge-btn').disabled = true;
-            updateStatus('Muxing media...');
-            log(`Starting Mux (Mode: ${mode})`);
-
-            ffmpeg.on('progress', ({ progress }) => {
-                const percent = Math.round(progress * 100);
-                updateStatus(`Processing: ${percent}%`);
-                if ($('progress-bar')) $('progress-bar').style.width = `${percent}%`;
-            });
-
-            try {
-                log('Reading source files...');
-                const vData = new Uint8Array(await state.video.arrayBuffer());
-                const aData = new Uint8Array(await state.audio.arrayBuffer());
-                
-                await ffmpeg.writeFile('v.mp4', vData);
-                await ffmpeg.writeFile('a.mp3', aData);
-
-                const args = (mode === 'replace')
-                    ? ['-i', 'v.mp4', '-i', 'a.mp3', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0', '-map', '1:a:0', '-shortest', 'out.mp4']
-                    : ['-i', 'v.mp4', '-i', 'a.mp3', '-filter_complex', '[0:a][1:a]amix=inputs=2:duration=first[ao]', '-map', '0:v:0', '-map', '[ao]', '-c:v', 'copy', '-c:a', 'aac', 'out.mp4'];
-
-                log('Executing muxer...');
-                await ffmpeg.exec(args);
-
-                log('Preparing download...');
-                const data = await ffmpeg.readFile('out.mp4');
-                const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `merged_${Date.now()}.mp4`;
-                a.click();
-
-                updateStatus('Success!');
-                log('Workflow complete.');
-            } catch (err) {
-                log(`Muxing Error: ${err.message}`, true);
-                updateStatus('Muxing Failed', true);
-            } finally {
-                $('merge-btn').disabled = false;
-            }
-        };
-
+        // Start
+        setupInteractions();
         init();
     </script>
 </body>
