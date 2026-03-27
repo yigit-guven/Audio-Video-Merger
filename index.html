@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Video Merger | V0.9.8</title>
-    <!-- RENAME Style to break cache -->
-    <link rel="stylesheet" href="src/app.css?v=100">
-    <!-- Load FFmpeg v0.9.8 via Alternative CDN (jsDelivr) -->
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.9.8/dist/ffmpeg.min.js?v=100"></script>
+    <title>Audio Video Merger | V0.12-ST</title>
+    <link rel="stylesheet" href="src/app.css?v=200">
 </head>
 <body>
-    <!-- HIGH VISIBILITY CACHE-BUSTER BANNER -->
-    <div style="background: #ef4444; color: white; text-align: center; padding: 5px; font-weight: bold; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 10000; letter-spacing: 1px;">
-        V0.9.8 ENGINE ACTIVATED (Ultra-Compatibility Mode)
+    <div style="background: #10b981; color: white; text-align: center; padding: 5px; font-weight: bold; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 10000; letter-spacing: 1px;">
+        V0.12-ST ENGINE ACTIVATED (Headerless Mode)
     </div>
 
     <div id="app" style="margin-top: 30px;">
@@ -68,7 +64,7 @@
                 <section class="action-container">
                     <div class="status-bar">
                         <div id="progress-bar" class="progress"></div>
-                        <p id="status-text">Ready (V0.9.8 System)</p>
+                        <p id="status-text">Ready (V0.12-ST)</p>
                     </div>
                     <button id="merge-btn" class="primary-btn" disabled>
                         Mux & Export MP4
@@ -76,7 +72,7 @@
                 </section>
 
                 <section class="system-log-container">
-                    <div id="system-log">System initializing...</div>
+                    <div id="system-log">System initiating...</div>
                 </section>
             </div>
         </main>
@@ -86,13 +82,12 @@
         </footer>
     </div>
 
-    <script>
-        // High-Compatibility v0.9.8 Logic
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ 
-            log: true,
-            corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.9.0/dist/ffmpeg-core.js'
-        });
+    <script type="module">
+        // Import modern v0.12 ESM components from CDN
+        import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm';
+        import { toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm';
+
+        const ffmpeg = new FFmpeg();
         const state = { loaded: false, video: null, audio: null };
 
         const $ = (id) => document.getElementById(id);
@@ -118,24 +113,30 @@
         const checkReady = () => {
             if (state.video && state.audio && state.loaded) {
                 $('merge-btn').disabled = false;
-                updateStatus('Files ready.');
+                updateStatus('Ready to merge.');
             }
         };
 
         const init = async () => {
             try {
-                log('V0.9.8 ENGINE LOADED (jsDelivr)');
-                updateStatus('Starting system...');
+                log('Launching V0.12-ST (Final Headerless Architecture)...');
+                updateStatus('Loading core...');
+
+                const baseURL = 'https://unpkg.com/@ffmpeg/core-st@0.12.2/dist/esm';
                 
-                await ffmpeg.load();
-                
+                // Use toBlobURL to bypass CORS and Header requirements
+                await ffmpeg.load({
+                    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+                    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
+                });
+
                 state.loaded = true;
                 updateStatus('Ready');
-                log('System ready for local processing.');
+                log('System ready. NO security headers required.');
                 checkReady();
             } catch (err) {
-                log(`ERROR: ${err.message || 'Initialization failed'}`, true);
-                updateStatus('Engine Load Error', true);
+                log(`CRITICAL ERROR: ${err.message}`, true);
+                updateStatus('Load Failed', true);
             }
         };
 
@@ -144,14 +145,14 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            log(`File captured: ${file.name}`);
+            log(`Selected: ${file.name}`);
 
             if (e.target.id === 'video-input') {
                 state.video = file;
-                $('video-name').innerText = `Selected: ${file.name}`;
+                $('video-name').innerText = file.name;
             } else if (e.target.id === 'audio-input') {
                 state.audio = file;
-                $('audio-name').innerText = `Selected: ${file.name}`;
+                $('audio-name').innerText = file.name;
             }
 
             checkReady();
@@ -162,29 +163,29 @@
 
             const mode = document.querySelector('input[name="audio-mode"]:checked').value;
             $('merge-btn').disabled = true;
-            updateStatus('Muxing media...');
-            log(`Muxing started (Mode: ${mode})`);
+            updateStatus('Muxing...');
+            log(`Muxing started (${mode})`);
 
-            ffmpeg.setProgress(({ ratio }) => {
-                const percent = Math.round(ratio * 100);
-                updateStatus(`Progress: ${percent}%`);
+            ffmpeg.on('progress', ({ progress }) => {
+                const percent = Math.round(progress * 100);
+                updateStatus(`Processing: ${percent}%`);
                 if ($('progress-bar')) $('progress-bar').style.width = `${percent}%`;
             });
 
             try {
-                log('Reading source files...');
-                ffmpeg.FS('writeFile', 'v.mp4', await fetchFile(state.video));
-                ffmpeg.FS('writeFile', 'a.mp3', await fetchFile(state.audio));
+                log('Writing Files...');
+                await ffmpeg.writeFile('v.mp4', await fetchFile(state.video));
+                await ffmpeg.writeFile('a.mp3', await fetchFile(state.audio));
 
                 const args = (mode === 'replace')
                     ? ['-i', 'v.mp4', '-i', 'a.mp3', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0', '-map', '1:a:0', '-shortest', 'out.mp4']
                     : ['-i', 'v.mp4', '-i', 'a.mp3', '-filter_complex', '[0:a][1:a]amix=inputs=2:duration=first[ao]', '-map', '0:v:0', '-map', '[ao]', '-c:v', 'copy', '-c:a', 'aac', 'out.mp4'];
 
-                log('Executing sync command...');
-                await ffmpeg.run(...args);
+                log('Executing FFmpeg...');
+                await ffmpeg.exec(args);
 
-                log('Creating export...');
-                const data = ffmpeg.FS('readFile', 'out.mp4');
+                log('Exporting...');
+                const data = await ffmpeg.readFile('out.mp4');
                 const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
                 
                 const a = document.createElement('a');
@@ -192,17 +193,21 @@
                 a.download = `merged_${Date.now()}.mp4`;
                 a.click();
 
-                updateStatus('Done! Exporting...');
-                log('Workflow successful.');
+                updateStatus('Finished!');
+                log('Muxing complete.');
             } catch (err) {
                 log(`Muxing Error: ${err.message}`, true);
-                updateStatus('Muxing Failed', true);
+                updateStatus('Error', true);
             } finally {
                 $('merge-btn').disabled = false;
             }
         };
 
-        // Automatic Start
+        // Standard fetchFile for v0.12
+        async function fetchFile(file) {
+            return new Uint8Array(await file.arrayBuffer());
+        }
+
         init();
     </script>
 </body>
