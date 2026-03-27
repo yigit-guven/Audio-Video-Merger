@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Video Merger | Premium Web Utility</title>
-    <link rel="stylesheet" href="src/style.css">
-    <!-- Load FFmpeg v0.9.8 (Maximum Compatibility Legacy) -->
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.9.8/dist/ffmpeg.min.js"></script>
+    <title>Audio Video Merger | V0.9.8</title>
+    <link rel="stylesheet" href="src/style.css?v=9.8">
+    <!-- Load FFmpeg v0.9.8 (Maximum Compatibility Legacy) with cache-bust -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.9.8/dist/ffmpeg.min.js?v=9.8"></script>
 </head>
 <body>
     <div id="app">
@@ -62,7 +62,7 @@
                 <section class="action-container">
                     <div class="status-bar">
                         <div id="progress-bar" class="progress"></div>
-                        <p id="status-text">Ready to process</p>
+                        <p id="status-text">Initialising V0.9.8...</p>
                     </div>
                     <button id="merge-btn" class="primary-btn" disabled>
                         Mux & Export MP4
