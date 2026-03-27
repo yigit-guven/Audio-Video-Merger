@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Video Merger | Local Engine</title>
-    <!-- COI Service Worker for GitHub Pages Header Injection -->
+    <title>Audio Video Merger | Stable Engine</title>
+    <!-- COI Service Worker: Absolute Requirement for GitHub Pages -->
     <script src="coi-serviceworker.js"></script>
-    <link rel="stylesheet" href="src/app.css?v=300">
+    <link rel="stylesheet" href="src/app.css?v=500">
+    <!-- Load FFmpeg v0.11.0 (The Proven Choice for Web Muxing) -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
 </head>
 <body>
-    <div style="background: #3b82f6; color: white; text-align: center; padding: 5px; font-weight: bold; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 10000; letter-spacing: 1px;">
-        LOCAL SAME-ORIGIN ENGINE ACTIVATED (Robust Mode)
+    <!-- PERSISTENT SECURITY NOTICE -->
+    <div id="security-notice" style="background: #f59e0b; color: black; text-align: center; padding: 8px; font-weight: bold; font-size: 13px; position: fixed; top: 0; width: 100%; z-index: 10000; border-bottom: 2px solid #d97706;">
+        ⚠️ IMPORTANT: If "System Load Error" appears, REFRESH 2-3 TIMES (Ctrl+F5) to activate the security engine.
     </div>
 
-    <div id="app" style="margin-top: 30px;">
+    <div id="app" style="margin-top: 45px;">
         <header>
             <h1>Audio Video Merger</h1>
             <p class="subtitle">Secure, Client-Side Media Synchronization</p>
@@ -66,7 +69,7 @@
                 <section class="action-container">
                     <div class="status-bar">
                         <div id="progress-bar" class="progress"></div>
-                        <p id="status-text">Initialising Local System...</p>
+                        <p id="status-text">Ready to process</p>
                     </div>
                     <button id="merge-btn" class="primary-btn" disabled>
                         Mux & Export MP4
@@ -84,12 +87,14 @@
         </footer>
     </div>
 
-    <script type="module">
-        // Import FFmpeg + Utils from local bundle or CDN (Loader is fine from CDN)
-        import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm';
-        import { toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm';
-
-        const ffmpeg = new FFmpeg();
+    <script>
+        // Proven v0.11.0 Logic
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ 
+            log: true,
+            mainName: 'main',
+            corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+        });
         const state = { loaded: false, video: null, audio: null };
 
         const $ = (id) => document.getElementById(id);
@@ -115,33 +120,33 @@
         const checkReady = () => {
             if (state.video && state.audio && state.loaded) {
                 $('merge-btn').disabled = false;
-                updateStatus('Ready.');
+                updateStatus('Ready');
             }
         };
 
         const init = async () => {
             try {
-                log('Launching Robust Local Engine (Same-Origin)...');
-                updateStatus('Configuring assets...');
+                log('Initialising Stable Engine (v0.11)...');
+                updateStatus('Checking security context...');
 
-                // We load from LOCAL files (copied to public/ during build)
-                // This bypasses ALL same-origin/cross-origin worker blocks
-                await ffmpeg.load({
-                    coreURL: await toBlobURL('ffmpeg-core.js', 'text/javascript'),
-                    wasmURL: await toBlobURL('ffmpeg-core.wasm', 'application/wasm'),
-                    workerURL: await toBlobURL('ffmpeg-worker.js', 'text/javascript')
-                });
+                if (window.crossOriginIsolated) {
+                    log('Security Context: SECURE (Isolated)');
+                    $('security-notice').style.display = 'none';
+                    $('app').style.marginTop = '30px';
+                } else {
+                    log('WARNING: Header missing. Waiting for Service Worker...', true);
+                }
 
+                await ffmpeg.load();
+                
                 state.loaded = true;
                 updateStatus('Ready');
-                log('System ready. Status: LOCAL-SECURE');
+                log('System ready.');
                 checkReady();
             } catch (err) {
                 log(`CRITICAL ERROR: ${err.message}`, true);
-                if (err.message.includes('SharedArrayBuffer')) {
-                    log('Fix: Please REFRESH the page to activate the security worker.', true);
-                }
-                updateStatus('Load Failed', true);
+                log('Hint: Refresh 2-3 times (Ctrl+F5) to force worker activation.', true);
+                updateStatus('System Load Error', true);
             }
         };
 
@@ -171,26 +176,25 @@
             updateStatus('Muxing media...');
             log(`Starting Mux (Mode: ${mode})`);
 
-            ffmpeg.on('progress', ({ progress }) => {
-                const percent = Math.round(progress * 100);
-                updateStatus(`Progress: ${percent}%`);
+            ffmpeg.setProgress(({ ratio }) => {
+                const percent = Math.round(ratio * 100);
+                updateStatus(`Processing: ${percent}%`);
                 if ($('progress-bar')) $('progress-bar').style.width = `${percent}%`;
             });
 
             try {
-                log('Preparing virtual storage...');
-                await ffmpeg.writeFile('v.mp4', await fetchFile(state.video));
-                await ffmpeg.writeFile('a.mp3', await fetchFile(state.audio));
+                ffmpeg.FS('writeFile', 'v.mp4', await fetchFile(state.video));
+                ffmpeg.FS('writeFile', 'a.mp3', await fetchFile(state.audio));
 
                 const args = (mode === 'replace')
                     ? ['-i', 'v.mp4', '-i', 'a.mp3', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0', '-map', '1:a:0', '-shortest', 'out.mp4']
                     : ['-i', 'v.mp4', '-i', 'a.mp3', '-filter_complex', '[0:a][1:a]amix=inputs=2:duration=first[ao]', '-map', '0:v:0', '-map', '[ao]', '-c:v', 'copy', '-c:a', 'aac', 'out.mp4'];
 
-                log('Executing media engine...');
-                await ffmpeg.exec(args);
+                log('Executing sync command...');
+                await ffmpeg.run(...args);
 
-                log('Muxing finished. Generating download...');
-                const data = await ffmpeg.readFile('out.mp4');
+                log('Preparing export...');
+                const data = ffmpeg.FS('readFile', 'out.mp4');
                 const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
                 
                 const a = document.createElement('a');
@@ -198,20 +202,15 @@
                 a.download = `merged_${Date.now()}.mp4`;
                 a.click();
 
-                updateStatus('Done! Check downloads.');
+                updateStatus('Success!');
                 log('Workflow complete.');
             } catch (err) {
                 log(`Muxing Error: ${err.message}`, true);
-                updateStatus('Error', true);
+                updateStatus('Muxing Failed', true);
             } finally {
                 $('merge-btn').disabled = false;
             }
         };
-
-        // Utility: File to Uint8Array
-        async function fetchFile(file) {
-            return new Uint8Array(await file.arrayBuffer());
-        }
 
         init();
     </script>
