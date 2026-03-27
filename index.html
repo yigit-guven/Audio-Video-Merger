@@ -4,12 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audio Video Merger | V0.9.8</title>
-    <link rel="stylesheet" href="src/style.css?v=9.8">
-    <!-- Load FFmpeg v0.9.8 (Maximum Compatibility Legacy) with cache-bust -->
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.9.8/dist/ffmpeg.min.js?v=9.8"></script>
+    <!-- RENAME Style to break cache -->
+    <link rel="stylesheet" href="src/app.css?v=100">
+    <!-- Load FFmpeg v0.9.8 via Alternative CDN (jsDelivr) -->
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.9.8/dist/ffmpeg.min.js?v=100"></script>
 </head>
 <body>
-    <div id="app">
+    <!-- HIGH VISIBILITY CACHE-BUSTER BANNER -->
+    <div style="background: #ef4444; color: white; text-align: center; padding: 5px; font-weight: bold; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 10000; letter-spacing: 1px;">
+        V0.9.8 ENGINE ACTIVATED (Ultra-Compatibility Mode)
+    </div>
+
+    <div id="app" style="margin-top: 30px;">
         <header>
             <h1>Audio Video Merger</h1>
             <p class="subtitle">Secure, Client-Side Media Synchronization</p>
@@ -62,7 +68,7 @@
                 <section class="action-container">
                     <div class="status-bar">
                         <div id="progress-bar" class="progress"></div>
-                        <p id="status-text">Initialising V0.9.8...</p>
+                        <p id="status-text">Ready (V0.9.8 System)</p>
                     </div>
                     <button id="merge-btn" class="primary-btn" disabled>
                         Mux & Export MP4
@@ -85,7 +91,7 @@
         const { createFFmpeg, fetchFile } = FFmpeg;
         const ffmpeg = createFFmpeg({ 
             log: true,
-            corePath: 'https://unpkg.com/@ffmpeg/core@0.9.0/dist/ffmpeg-core.js'
+            corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.9.0/dist/ffmpeg-core.js'
         });
         const state = { loaded: false, video: null, audio: null };
 
@@ -112,14 +118,14 @@
         const checkReady = () => {
             if (state.video && state.audio && state.loaded) {
                 $('merge-btn').disabled = false;
-                updateStatus('Files ready for muxing.');
+                updateStatus('Files ready.');
             }
         };
 
         const init = async () => {
             try {
-                log('Launching v0.9.8 Engine (Ultra-Compatibility Mode)...');
-                updateStatus('Starting engine...');
+                log('V0.9.8 ENGINE LOADED (jsDelivr)');
+                updateStatus('Starting system...');
                 
                 await ffmpeg.load();
                 
