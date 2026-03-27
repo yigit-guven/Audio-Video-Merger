@@ -119,23 +119,29 @@
 
         const init = async () => {
             try {
-                log('Launching V0.12-ST (Final Headerless Architecture)...');
-                updateStatus('Loading core...');
+                log('Launching V0.12-ST (jsDelivr Architecture)...');
+                updateStatus('Loading core engine...');
 
-                const baseURL = 'https://unpkg.com/@ffmpeg/core-st@0.12.2/dist/esm';
+                // Use jsDelivr for better reliability
+                const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.12.6/dist/esm';
                 
-                // Use toBlobURL to bypass CORS and Header requirements
-                await ffmpeg.load({
-                    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-                    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
-                });
+                log('Fetching media assets...');
+                const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
+                const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+                
+                log('Assets cached in blob. Initializing...');
+                await ffmpeg.load({ coreURL, wasmURL });
 
                 state.loaded = true;
                 updateStatus('Ready');
-                log('System ready. NO security headers required.');
+                log('System ready. Status: ONLINE');
                 checkReady();
             } catch (err) {
                 log(`CRITICAL ERROR: ${err.message}`, true);
+                log('Common Causes:', true);
+                log('- Content Blocker / AdBlocker');
+                log('- GitHub Pages environment delay');
+                log('- Temporary CDN outage');
                 updateStatus('Load Failed', true);
             }
         };
