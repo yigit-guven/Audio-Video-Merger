@@ -1,17 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audio Video Merger | Premium Web Utility</title>
     <link rel="stylesheet" href="/src/style.css">
-    <!-- COI Service Worker for GitHub Pages Header Support -->
-    <script src="/coi-serviceworker.js"></script>
-    <!-- Load FFmpeg v0.11 via CDN (UMD Version) -->
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
+    <!-- Load FFmpeg v0.10.1 (High-Compatibility Legacy) -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.10.1/dist/ffmpeg.min.js"></script>
 </head>
-
 <body>
     <div id="app">
         <header>
@@ -80,15 +76,17 @@
         </main>
 
         <footer>
-            <p>All processing is strictly local. <a href="https://github.com/yigit-guven/Audio-Video-Merger"
-                    target="_blank">View Source</a></p>
+            <p>All processing is strictly local. <a href="https://github.com/yigit-guven/Audio-Video-Merger" target="_blank">View Source</a></p>
         </footer>
     </div>
 
     <script>
-        // Use FFmpeg from global window object (loaded via CDN)
         const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: true });
+        const ffmpeg = createFFmpeg({ 
+            log: true,
+            // Fallback to CDN for the core if local loading is issues
+            corePath: 'https://unpkg.com/@ffmpeg/core@0.10.0/dist/ffmpeg-core.js'
+        });
         const state = { loaded: false, video: null, audio: null };
 
         const $ = (id) => document.getElementById(id);
@@ -118,38 +116,24 @@
             }
         };
 
-        // Initialization
         const init = async () => {
             try {
-                log('Starting System (v0.11 Stable UI)...');
-                updateStatus('Checking security context...');
-
-                if (!window.crossOriginIsolated) {
-                    log('WARNING: Not cross-origin isolated. Attempting fix...', true);
-                } else {
-                    log('Security Context: SECURE (Isolated)');
-                }
-
-                updateStatus('Loading media engine...');
+                log('Launching High-Compatibility Engine (v0.10)...');
+                updateStatus('Initialising system...');
                 
-                // v0.11 CDN load
                 await ffmpeg.load();
                 
                 state.loaded = true;
                 updateStatus('Ready');
-                log('Media System Ready.');
+                log('System ready.');
                 checkReady();
             } catch (err) {
-                log(`CRITICAL FAIL: ${err.message || 'Engine load blocked'}`, true);
-                log('Potential Fixes:', true);
-                log('1. Refresh clearly (Ctrl+F5)');
-                log('2. Check if browser supports SharedArrayBuffer');
-                log('3. Ensure URL is http://localhost:5174/');
-                updateStatus('Engine Failure', true);
+                log(`CRITICAL ERROR: ${err.message}`, true);
+                log('Hint: Ensure you are on http://localhost:5174/', true);
+                updateStatus('System Load Error', true);
             }
         };
 
-        // File Selection Logic
         document.addEventListener('change', (e) => {
             if (e.target.type !== 'file') return;
             const file = e.target.files[0];
@@ -168,7 +152,6 @@
             checkReady();
         });
 
-        // Processing Logic
         $('merge-btn').onclick = async () => {
             if (!state.video || !state.audio || !state.loaded) return;
 
@@ -180,11 +163,11 @@
             ffmpeg.setProgress(({ ratio }) => {
                 const percent = Math.round(ratio * 100);
                 updateStatus(`Processing: ${percent}%`);
-                $('progress-bar').style.width = `${percent}%`;
+                if ($('progress-bar')) $('progress-bar').style.width = `${percent}%`;
             });
 
             try {
-                log('Mapping assets...');
+                log('Reading files...');
                 ffmpeg.FS('writeFile', 'v.mp4', await fetchFile(state.video));
                 ffmpeg.FS('writeFile', 'a.mp3', await fetchFile(state.audio));
 
@@ -192,31 +175,29 @@
                     ? ['-i', 'v.mp4', '-i', 'a.mp3', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0', '-map', '1:a:0', '-shortest', 'out.mp4']
                     : ['-i', 'v.mp4', '-i', 'a.mp3', '-filter_complex', '[0:a][1:a]amix=inputs=2:duration=first[ao]', '-map', '0:v:0', '-map', '[ao]', '-c:v', 'copy', '-c:a', 'aac', 'out.mp4'];
 
-                log('Executing muxer command...');
+                log('Executing muxer...');
                 await ffmpeg.run(...args);
 
-                log('Generating download...');
+                log('Preparing download...');
                 const data = ffmpeg.FS('readFile', 'out.mp4');
                 const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-
+                
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = `merged_${Date.now()}.mp4`;
                 a.click();
 
-                updateStatus('Success! Download started.');
-                log('Workflow finished.');
+                updateStatus('Success!');
+                log('Workflow complete.');
             } catch (err) {
-                log(`Error: ${err.message}`, true);
-                updateStatus('Failed');
+                log(`Muxing Error: ${err.message}`, true);
+                updateStatus('Muxing Failed', true);
             } finally {
                 $('merge-btn').disabled = false;
             }
         };
 
-        // Start
         init();
     </script>
 </body>
-
 </html>
