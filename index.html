@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Video Merger | V0.12-ST</title>
-    <link rel="stylesheet" href="src/app.css?v=200">
+    <title>Audio Video Merger | Local Engine</title>
+    <!-- COI Service Worker for GitHub Pages Header Injection -->
+    <script src="coi-serviceworker.js"></script>
+    <link rel="stylesheet" href="src/app.css?v=300">
 </head>
 <body>
-    <div style="background: #10b981; color: white; text-align: center; padding: 5px; font-weight: bold; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 10000; letter-spacing: 1px;">
-        V0.12-ST ENGINE ACTIVATED (Headerless Mode)
+    <div style="background: #3b82f6; color: white; text-align: center; padding: 5px; font-weight: bold; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 10000; letter-spacing: 1px;">
+        LOCAL SAME-ORIGIN ENGINE ACTIVATED (Robust Mode)
     </div>
 
     <div id="app" style="margin-top: 30px;">
@@ -64,7 +66,7 @@
                 <section class="action-container">
                     <div class="status-bar">
                         <div id="progress-bar" class="progress"></div>
-                        <p id="status-text">Ready (V0.12-ST)</p>
+                        <p id="status-text">Initialising Local System...</p>
                     </div>
                     <button id="merge-btn" class="primary-btn" disabled>
                         Mux & Export MP4
@@ -72,7 +74,7 @@
                 </section>
 
                 <section class="system-log-container">
-                    <div id="system-log">System initiating...</div>
+                    <div id="system-log">System initializing...</div>
                 </section>
             </div>
         </main>
@@ -83,7 +85,7 @@
     </div>
 
     <script type="module">
-        // Import modern v0.12 ESM components from CDN
+        // Import FFmpeg + Utils from local bundle or CDN (Loader is fine from CDN)
         import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm';
         import { toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm';
 
@@ -113,38 +115,32 @@
         const checkReady = () => {
             if (state.video && state.audio && state.loaded) {
                 $('merge-btn').disabled = false;
-                updateStatus('Ready to merge.');
+                updateStatus('Ready.');
             }
         };
 
         const init = async () => {
             try {
-                log('Launching V0.12-ST (jsDelivr Architecture)...');
-                updateStatus('Loading core engine...');
+                log('Launching Robust Local Engine (Same-Origin)...');
+                updateStatus('Configuring assets...');
 
-                // Use jsDelivr for everything to ensure consistency
-                const coreBaseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.12.6/dist/esm';
-                const ffmpegBaseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm';
-                
-                log('Fetching media assets...');
-                // We MUST blob the worker too to bypass CORS-worker blocks
-                const coreURL = await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript');
-                const wasmURL = await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm');
-                const workerURL = await toBlobURL(`${ffmpegBaseURL}/worker.js`, 'text/javascript');
-                
-                log('Assets cached in blob. Initializing...');
-                await ffmpeg.load({ coreURL, wasmURL, workerURL });
+                // We load from LOCAL files (copied to public/ during build)
+                // This bypasses ALL same-origin/cross-origin worker blocks
+                await ffmpeg.load({
+                    coreURL: await toBlobURL('ffmpeg-core.js', 'text/javascript'),
+                    wasmURL: await toBlobURL('ffmpeg-core.wasm', 'application/wasm'),
+                    workerURL: await toBlobURL('ffmpeg-worker.js', 'text/javascript')
+                });
 
                 state.loaded = true;
                 updateStatus('Ready');
-                log('System ready. Status: ONLINE');
+                log('System ready. Status: LOCAL-SECURE');
                 checkReady();
             } catch (err) {
                 log(`CRITICAL ERROR: ${err.message}`, true);
-                log('Common Causes:', true);
-                log('- Content Blocker / AdBlocker');
-                log('- GitHub Pages environment delay');
-                log('- Temporary CDN outage');
+                if (err.message.includes('SharedArrayBuffer')) {
+                    log('Fix: Please REFRESH the page to activate the security worker.', true);
+                }
                 updateStatus('Load Failed', true);
             }
         };
@@ -154,7 +150,7 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            log(`Selected: ${file.name}`);
+            log(`File captured: ${file.name}`);
 
             if (e.target.id === 'video-input') {
                 state.video = file;
@@ -172,17 +168,17 @@
 
             const mode = document.querySelector('input[name="audio-mode"]:checked').value;
             $('merge-btn').disabled = true;
-            updateStatus('Muxing...');
-            log(`Muxing started (${mode})`);
+            updateStatus('Muxing media...');
+            log(`Starting Mux (Mode: ${mode})`);
 
             ffmpeg.on('progress', ({ progress }) => {
                 const percent = Math.round(progress * 100);
-                updateStatus(`Processing: ${percent}%`);
+                updateStatus(`Progress: ${percent}%`);
                 if ($('progress-bar')) $('progress-bar').style.width = `${percent}%`;
             });
 
             try {
-                log('Writing Files...');
+                log('Preparing virtual storage...');
                 await ffmpeg.writeFile('v.mp4', await fetchFile(state.video));
                 await ffmpeg.writeFile('a.mp3', await fetchFile(state.audio));
 
@@ -190,10 +186,10 @@
                     ? ['-i', 'v.mp4', '-i', 'a.mp3', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0', '-map', '1:a:0', '-shortest', 'out.mp4']
                     : ['-i', 'v.mp4', '-i', 'a.mp3', '-filter_complex', '[0:a][1:a]amix=inputs=2:duration=first[ao]', '-map', '0:v:0', '-map', '[ao]', '-c:v', 'copy', '-c:a', 'aac', 'out.mp4'];
 
-                log('Executing FFmpeg...');
+                log('Executing media engine...');
                 await ffmpeg.exec(args);
 
-                log('Exporting...');
+                log('Muxing finished. Generating download...');
                 const data = await ffmpeg.readFile('out.mp4');
                 const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
                 
@@ -202,8 +198,8 @@
                 a.download = `merged_${Date.now()}.mp4`;
                 a.click();
 
-                updateStatus('Finished!');
-                log('Muxing complete.');
+                updateStatus('Done! Check downloads.');
+                log('Workflow complete.');
             } catch (err) {
                 log(`Muxing Error: ${err.message}`, true);
                 updateStatus('Error', true);
@@ -212,7 +208,7 @@
             }
         };
 
-        // Standard fetchFile for v0.12
+        // Utility: File to Uint8Array
         async function fetchFile(file) {
             return new Uint8Array(await file.arrayBuffer());
         }
