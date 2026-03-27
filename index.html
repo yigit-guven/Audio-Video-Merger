@@ -122,15 +122,18 @@
                 log('Launching V0.12-ST (jsDelivr Architecture)...');
                 updateStatus('Loading core engine...');
 
-                // Use jsDelivr for better reliability
-                const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.12.6/dist/esm';
+                // Use jsDelivr for everything to ensure consistency
+                const coreBaseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-st@0.12.6/dist/esm';
+                const ffmpegBaseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm';
                 
                 log('Fetching media assets...');
-                const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-                const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+                // We MUST blob the worker too to bypass CORS-worker blocks
+                const coreURL = await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript');
+                const wasmURL = await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm');
+                const workerURL = await toBlobURL(`${ffmpegBaseURL}/worker.js`, 'text/javascript');
                 
                 log('Assets cached in blob. Initializing...');
-                await ffmpeg.load({ coreURL, wasmURL });
+                await ffmpeg.load({ coreURL, wasmURL, workerURL });
 
                 state.loaded = true;
                 updateStatus('Ready');
