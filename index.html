@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audio Video Merger | Premium Web Utility</title>
     <link rel="stylesheet" href="src/style.css">
-    <!-- Load FFmpeg v0.10.1 (High-Compatibility Legacy) with cache-bust -->
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.10.1/dist/ffmpeg.min.js?v=final"></script>
+    <!-- Load FFmpeg v0.9.8 (Maximum Compatibility Legacy) -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.9.8/dist/ffmpeg.min.js"></script>
 </head>
 <body>
     <div id="app">
@@ -81,11 +81,11 @@
     </div>
 
     <script>
+        // High-Compatibility v0.9.8 Logic
         const { createFFmpeg, fetchFile } = FFmpeg;
         const ffmpeg = createFFmpeg({ 
             log: true,
-            // Fallback to CDN for the core if local loading is issues
-            corePath: 'https://unpkg.com/@ffmpeg/core@0.10.0/dist/ffmpeg-core.js'
+            corePath: 'https://unpkg.com/@ffmpeg/core@0.9.0/dist/ffmpeg-core.js'
         });
         const state = { loaded: false, video: null, audio: null };
 
@@ -118,19 +118,18 @@
 
         const init = async () => {
             try {
-                log('Launching High-Compatibility Engine (v0.10)...');
-                updateStatus('Initialising system...');
+                log('Launching v0.9.8 Engine (Ultra-Compatibility Mode)...');
+                updateStatus('Starting engine...');
                 
                 await ffmpeg.load();
                 
                 state.loaded = true;
                 updateStatus('Ready');
-                log('System ready.');
+                log('System ready for local processing.');
                 checkReady();
             } catch (err) {
-                log(`CRITICAL ERROR: ${err.message}`, true);
-                log('Hint: Ensure you are on http://localhost:5174/', true);
-                updateStatus('System Load Error', true);
+                log(`ERROR: ${err.message || 'Initialization failed'}`, true);
+                updateStatus('Engine Load Error', true);
             }
         };
 
@@ -158,16 +157,16 @@
             const mode = document.querySelector('input[name="audio-mode"]:checked').value;
             $('merge-btn').disabled = true;
             updateStatus('Muxing media...');
-            log(`Starting Mux (Mode: ${mode})`);
+            log(`Muxing started (Mode: ${mode})`);
 
             ffmpeg.setProgress(({ ratio }) => {
                 const percent = Math.round(ratio * 100);
-                updateStatus(`Processing: ${percent}%`);
+                updateStatus(`Progress: ${percent}%`);
                 if ($('progress-bar')) $('progress-bar').style.width = `${percent}%`;
             });
 
             try {
-                log('Reading files...');
+                log('Reading source files...');
                 ffmpeg.FS('writeFile', 'v.mp4', await fetchFile(state.video));
                 ffmpeg.FS('writeFile', 'a.mp3', await fetchFile(state.audio));
 
@@ -175,10 +174,10 @@
                     ? ['-i', 'v.mp4', '-i', 'a.mp3', '-c:v', 'copy', '-c:a', 'aac', '-map', '0:v:0', '-map', '1:a:0', '-shortest', 'out.mp4']
                     : ['-i', 'v.mp4', '-i', 'a.mp3', '-filter_complex', '[0:a][1:a]amix=inputs=2:duration=first[ao]', '-map', '0:v:0', '-map', '[ao]', '-c:v', 'copy', '-c:a', 'aac', 'out.mp4'];
 
-                log('Executing muxer...');
+                log('Executing sync command...');
                 await ffmpeg.run(...args);
 
-                log('Preparing download...');
+                log('Creating export...');
                 const data = ffmpeg.FS('readFile', 'out.mp4');
                 const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
                 
@@ -187,8 +186,8 @@
                 a.download = `merged_${Date.now()}.mp4`;
                 a.click();
 
-                updateStatus('Success!');
-                log('Workflow complete.');
+                updateStatus('Done! Exporting...');
+                log('Workflow successful.');
             } catch (err) {
                 log(`Muxing Error: ${err.message}`, true);
                 updateStatus('Muxing Failed', true);
@@ -197,6 +196,7 @@
             }
         };
 
+        // Automatic Start
         init();
     </script>
 </body>
