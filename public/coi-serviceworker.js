@@ -1,5 +1,6 @@
 /*! coi-serviceworker v0.2.3 - MiSawa <https://github.com/gzuidhof/coi-serviceworker> */
 if (typeof window === "undefined") {
+    console.log("COI Service Worker: Active");
     self.addEventListener("install", () => self.skipWaiting());
     self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 

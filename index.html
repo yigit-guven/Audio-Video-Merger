@@ -121,20 +121,31 @@
         // Initialization
         const init = async () => {
             try {
-                log('Initializing Stable Engine (v0.11 CDN)...');
-                updateStatus('Loading system components...');
+                log('Starting System (v0.11 Stable UI)...');
+                updateStatus('Checking security context...');
 
+                if (!window.crossOriginIsolated) {
+                    log('WARNING: Not cross-origin isolated. Attempting fix...', true);
+                } else {
+                    log('Security Context: SECURE (Isolated)');
+                }
+
+                updateStatus('Loading media engine...');
+                
+                // v0.11 CDN load
                 await ffmpeg.load();
-
+                
                 state.loaded = true;
                 updateStatus('Ready');
-                log('System ready.');
+                log('Media System Ready.');
                 checkReady();
             } catch (err) {
-                log('CRITICAL: Header Error detected.', true);
-                log('Hint: This tool requires a "Secure Context" (localhost) and special headers. Please ensure you are viewing http://localhost:5174/', true);
-                updateStatus('System Load Error', true);
-                console.error(err);
+                log(`CRITICAL FAIL: ${err.message || 'Engine load blocked'}`, true);
+                log('Potential Fixes:', true);
+                log('1. Refresh clearly (Ctrl+F5)');
+                log('2. Check if browser supports SharedArrayBuffer');
+                log('3. Ensure URL is http://localhost:5174/');
+                updateStatus('Engine Failure', true);
             }
         };
 
